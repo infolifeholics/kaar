@@ -11,14 +11,17 @@ import {
   RefreshCw,
   Eye,
   AlertTriangle,
-  FileSpreadsheet,
-  Mail,
+  Leaf,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  Star,
 } from 'lucide-react';
-import { Product, Order, GoogleSheetsOrderPayload } from '../../types';
+import { Product, Order, Review } from '../../types';
 import { deleteProduct } from '../../services/productService';
 import { getAllOrders, updateOrderStatus } from '../../services/orderService';
+import { getAllReviews, approveReview, rejectOrDeleteReview } from '../../services/reviewService';
 import { logoutAdmin } from '../../services/authService';
-import { ADMIN_EMAIL, EmailLog } from '../../services/emailService';
 import ProductFormModal from './ProductFormModal';
 
 interface AdminDashboardProps {
@@ -36,7 +39,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onRefreshProducts,
   onViewProductLive,
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sheets' | 'emails'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'reviews'>('products');
 
   // Product filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,9 +58,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
 
-  // Email logs state
-  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
-  const [sheetsSyncLogs, setSheetsSyncLogs] = useState<GoogleSheetsOrderPayload[]>([]);
+  // Reviews state
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'pending' | 'approved'>('all');
 
   const fetchOrders = async () => {
     setLoadingOrders(true);
@@ -71,17 +75,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  useEffect(() => {
-    fetchOrders();
+  const fetchReviews = async () => {
+    setLoadingReviews(true);
     try {
-      const eLogs = JSON.parse(localStorage.getItem('kaar-email-logs') || '[]');
-      setEmailLogs(eLogs);
-      const sLogs = JSON.parse(localStorage.getItem('kaar-sheets-orders-sync') || '[]');
-      setSheetsSyncLogs(sLogs);
+      const all = await getAllReviews();
+      setReviews(all);
     } catch {
       // ignore
+    } finally {
+      setLoadingReviews(false);
     }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    fetchReviews();
   }, []);
+
+  const handleApproveReview = async (reviewId: string) => {
+    await approveReview(reviewId);
+    await fetchReviews();
+  };
+
+  const handleRejectReview = async (reviewId: string) => {
+    // Immediate deletion upon rejection as specified by user
+    await rejectOrDeleteReview(reviewId);
+    await fetchReviews();
+  };
 
   const handleOpenAdd = () => {
     setEditingProduct(null);
@@ -137,61 +157,333 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const totalPaidOrders = orders.filter(o => o.paymentStatus === 'paid').length;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: '#f8f7f2',
-        zIndex: 140,
-        overflowY: 'auto',
-        color: '#2d3029',
-      }}
-    >
+    <div className="admin-dashboard-container">
+      <style>{`
+        .admin-dashboard-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #f8f7f2;
+          z-index: 140;
+          overflow-y: auto;
+          color: #2d3029;
+          font-family: inherit;
+        }
+
+        .admin-header {
+          background: #354332;
+          color: #fff;
+          padding: 12px 24px;
+          display: flex;
+          justifyContent: space-between;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .admin-title-area {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .admin-title-text {
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          font-size: 15px;
+          color: #fff;
+          white-space: nowrap;
+        }
+
+        .admin-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-left: auto;
+        }
+
+        .admin-nav-bar {
+          background: #fff;
+          border-bottom: 1px solid #e7e5dc;
+          padding: 0 24px;
+          display: flex;
+          justifyContent: space-between;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .admin-nav-tabs {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .admin-nav-tab {
+          padding: 14px 0;
+          border: none;
+          background: transparent;
+          font-size: 13px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          white-space: nowrap;
+        }
+
+        .admin-add-product-btn {
+          margin-left: auto;
+          height: 34px;
+          padding: 0 16px;
+          font-size: 12px;
+          white-space: nowrap;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+        }
+
+        @media (max-width: 640px) {
+          .admin-header {
+            padding: 10px 16px;
+          }
+
+          .admin-nav-bar {
+            padding: 0 14px;
+            gap: 10px;
+          }
+
+          .admin-nav-tabs {
+            gap: 12px;
+          }
+
+          .admin-nav-tab {
+            padding: 12px 0;
+            font-size: 12px;
+          }
+
+          .admin-add-product-btn {
+            height: 30px;
+            padding: 0 10px;
+            font-size: 11px;
+            margin-left: auto;
+          }
+        }
+
+        .admin-main-body {
+          padding: 20px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .admin-kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+
+        .admin-kpi-card {
+          background: #fff;
+          border: 1px solid #e7e5dc;
+          padding: 14px 16px;
+          border-radius: 4px;
+        }
+
+        .admin-filter-bar {
+          background: #fff;
+          padding: 14px 16px;
+          border: 1px solid #e7e5dc;
+          display: flex;
+          justifyContent: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          border-radius: 4px;
+        }
+
+        .admin-search-box {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+          min-width: 180px;
+        }
+
+        .admin-filter-actions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+          width: 100%;
+        }
+
+        @media (min-width: 640px) {
+          .admin-filter-actions {
+            width: auto;
+          }
+        }
+
+        /* Responsive Product Views */
+        .admin-table-view {
+          display: none;
+        }
+
+        .admin-card-grid-view {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 12px;
+        }
+
+        @media (min-width: 768px) {
+          .admin-card-grid-view {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+          }
+        }
+
+        /* Large desktop can show traditional table if preferred, or keep cards */
+        @media (min-width: 1024px) {
+          .admin-table-view {
+            display: block;
+            background: #fff;
+            border: 1px solid #e7e5dc;
+            overflow-x: auto;
+          }
+          .admin-card-grid-view {
+            display: none;
+          }
+        }
+
+        /* Compact Product Card Style for Mobile */
+        .admin-compact-card {
+          background: #fff;
+          border: 1px solid #e7e5dc;
+          border-radius: 6px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .admin-card-media {
+          position: relative;
+          width: 100%;
+          height: 125px;
+          background: #faf8f2;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .admin-card-body {
+          padding: 10px 12px;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+        }
+
+        .admin-card-name {
+          font-family: 'Playfair Display', serif;
+          font-size: 13px;
+          font-weight: 600;
+          color: #2d3029;
+          line-height: 1.25;
+          margin: 0 0 4px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .admin-card-cat {
+          font-size: 10px;
+          color: #77786e;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 6px;
+        }
+
+        .admin-card-price-row {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+          margin-bottom: 8px;
+        }
+
+        .admin-card-price {
+          font-size: 14px;
+          font-weight: 600;
+          color: #2d3029;
+        }
+
+        .admin-card-compare {
+          font-size: 11px;
+          color: #99998f;
+          text-decoration: line-through;
+        }
+
+        .admin-card-actions {
+          margin-top: auto;
+          display: flex;
+          gap: 6px;
+          padding-top: 8px;
+          border-top: 1px solid #f2f0e9;
+        }
+
+        .admin-card-btn {
+          flex: 1;
+          height: 32px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          font-size: 11px;
+          border-radius: 3px;
+          cursor: pointer;
+          border: 1px solid #deddd4;
+          background: #faf9f5;
+          color: #3b4233;
+        }
+
+        .admin-card-btn.delete {
+          flex: 0 0 34px;
+          border-color: #fecaca;
+          color: #dc2626;
+          background: #fff;
+        }
+
+        .admin-card-btn.live {
+          flex: 0 0 34px;
+          color: #55584f;
+        }
+      `}</style>
+
       {/* Admin Header */}
-      <header
-        style={{
-          background: '#354332',
-          color: '#fff',
-          padding: '16px 36px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ fontWeight: 600, letterSpacing: '0.08em', fontSize: '16px' }}>
-            LIFEHOLICS · KAAR AYURVEDA ADMIN
+      <header className="admin-header">
+        <div className="admin-title-area">
+          <div className="admin-title-text">
+            KAAR ADMIN PANEL
           </div>
-          <span
-            style={{
-              background: '#4a5b46',
-              padding: '4px 10px',
-              fontSize: '11px',
-              borderRadius: '12px',
-              color: '#d6dfd2',
-            }}
-          >
-            {ADMIN_EMAIL}
-          </span>
+
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="admin-header-actions">
           <button
             onClick={onClose}
             className="button button-outline"
             style={{
               borderColor: 'rgba(255,255,255,0.4)',
               color: '#fff',
-              height: '38px',
-              padding: '0 16px',
-              fontSize: '12px',
+              height: '32px',
+              padding: '0 12px',
+              fontSize: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
           >
-            <Eye size={14} style={{ marginRight: '6px' }} /> View Live Website
+            <Eye size={13} style={{ marginRight: '4px' }} /> View Live
           </button>
           <button
             onClick={handleLogout}
@@ -202,132 +494,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '4px',
               fontSize: '12px',
             }}
           >
-            <LogOut size={16} /> Sign Out
+            <LogOut size={15} />
           </button>
         </div>
       </header>
 
       {/* Admin Navigation Bar */}
-      <div
-        style={{
-          background: '#fff',
-          borderBottom: '1px solid #e7e5dc',
-          padding: '0 36px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '32px' }}>
+      <div className="admin-nav-bar">
+        <div className="admin-nav-tabs">
           <button
+            className="admin-nav-tab"
             onClick={() => setActiveTab('products')}
             style={{
-              padding: '18px 0',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '14px',
               fontWeight: activeTab === 'products' ? 600 : 400,
               color: activeTab === 'products' ? '#354332' : '#77786e',
               borderBottom: activeTab === 'products' ? '2px solid #354332' : '2px solid transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
             }}
           >
-            <Package size={17} /> Products ({products.length})
+            <Package size={15} /> Products ({products.length})
           </button>
           <button
+            className="admin-nav-tab"
             onClick={() => setActiveTab('orders')}
             style={{
-              padding: '18px 0',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '14px',
               fontWeight: activeTab === 'orders' ? 600 : 400,
               color: activeTab === 'orders' ? '#354332' : '#77786e',
               borderBottom: activeTab === 'orders' ? '2px solid #354332' : '2px solid transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
             }}
           >
-            <ShoppingBag size={17} /> Orders & Payments ({orders.length})
+            <ShoppingBag size={15} /> Orders ({orders.length})
           </button>
           <button
-            onClick={() => setActiveTab('sheets')}
+            className="admin-nav-tab"
+            onClick={() => setActiveTab('reviews')}
             style={{
-              padding: '18px 0',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '14px',
-              fontWeight: activeTab === 'sheets' ? 600 : 400,
-              color: activeTab === 'sheets' ? '#354332' : '#77786e',
-              borderBottom: activeTab === 'sheets' ? '2px solid #354332' : '2px solid transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
+              fontWeight: activeTab === 'reviews' ? 600 : 400,
+              color: activeTab === 'reviews' ? '#354332' : '#77786e',
+              borderBottom: activeTab === 'reviews' ? '2px solid #354332' : '2px solid transparent',
+              position: 'relative',
             }}
           >
-            <FileSpreadsheet size={17} /> Google Sheets CRM
-          </button>
-          <button
-            onClick={() => setActiveTab('emails')}
-            style={{
-              padding: '18px 0',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '14px',
-              fontWeight: activeTab === 'emails' ? 600 : 400,
-              color: activeTab === 'emails' ? '#354332' : '#77786e',
-              borderBottom: activeTab === 'emails' ? '2px solid #354332' : '2px solid transparent',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Mail size={17} /> Email Automations ({emailLogs.length})
+            <MessageSquare size={15} /> Reviews ({reviews.length})
+            {reviews.filter((r) => r.status === 'pending').length > 0 && (
+              <span
+                style={{
+                  background: '#b45309',
+                  color: '#fff',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  marginLeft: '4px',
+                }}
+              >
+                {reviews.filter((r) => r.status === 'pending').length} new
+              </span>
+            )}
           </button>
         </div>
 
         {activeTab === 'products' && (
           <button
-            className="button button-dark"
+            className="button button-dark admin-add-product-btn"
             onClick={handleOpenAdd}
-            style={{ height: '38px', padding: '0 16px', fontSize: '13px' }}
           >
-            <Plus size={15} style={{ marginRight: '6px' }} /> Add New Product
+            <Plus size={13} /> Add Product
           </button>
         )}
       </div>
 
       {/* Main Content Body */}
-      <div style={{ padding: '32px 36px', maxWidth: '1400px', margin: '0 auto' }}>
-        
+      <div className="admin-main-body">
         {/* KPI Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
-          <div style={{ background: '#fff', border: '1px solid #e7e5dc', padding: '18px 22px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Catalog</span>
-            <h3 style={{ fontSize: '24px', margin: '4px 0 0', fontWeight: 600 }}>{products.length} Products</h3>
+        <div className="admin-kpi-grid">
+          <div className="admin-kpi-card">
+            <span style={{ fontSize: '10px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catalog</span>
+            <h3 style={{ fontSize: '18px', margin: '2px 0 0', fontWeight: 600 }}>{products.length} Products</h3>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e7e5dc', padding: '18px 22px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Orders</span>
-            <h3 style={{ fontSize: '24px', margin: '4px 0 0', fontWeight: 600 }}>{orders.length}</h3>
+          <div className="admin-kpi-card">
+            <span style={{ fontSize: '10px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Orders</span>
+            <h3 style={{ fontSize: '18px', margin: '2px 0 0', fontWeight: 600 }}>{orders.length}</h3>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e7e5dc', padding: '18px 22px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Verified Paid Orders</span>
-            <h3 style={{ fontSize: '24px', margin: '4px 0 0', fontWeight: 600, color: '#2e7d32' }}>{totalPaidOrders}</h3>
+          <div className="admin-kpi-card">
+            <span style={{ fontSize: '10px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paid Orders</span>
+            <h3 style={{ fontSize: '18px', margin: '2px 0 0', fontWeight: 600, color: '#2e7d32' }}>{totalPaidOrders}</h3>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e7e5dc', padding: '18px 22px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paid Revenue</span>
-            <h3 style={{ fontSize: '24px', margin: '4px 0 0', fontWeight: 600 }}>{money(totalRevenue)}</h3>
+          <div className="admin-kpi-card">
+            <span style={{ fontSize: '10px', color: '#77786e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenue</span>
+            <h3 style={{ fontSize: '18px', margin: '2px 0 0', fontWeight: 600 }}>{money(totalRevenue)}</h3>
           </div>
         </div>
 
@@ -335,72 +593,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'products' && (
           <div>
             {/* Control Bar: Search & Filters */}
-            <div
-              style={{
-                background: '#fff',
-                padding: '18px 24px',
-                border: '1px solid #e7e5dc',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '20px',
-                marginBottom: '24px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1', minWidth: '260px' }}>
-                <Search size={16} color="#77786e" />
+            <div className="admin-filter-bar">
+              <div className="admin-search-box">
+                <Search size={15} color="#77786e" />
                 <input
                   type="text"
-                  placeholder="Search products by title, category, sku..."
+                  placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     border: 'none',
                     outline: 'none',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     width: '100%',
                     background: 'transparent',
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+              <div className="admin-filter-actions">
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   style={{
-                    padding: '8px 12px',
-                    fontSize: '12px',
+                    padding: '6px 10px',
+                    fontSize: '11px',
                     border: '1px solid #deddd4',
                     background: '#fff',
                     borderRadius: '2px',
+                    flex: '1',
                   }}
                 >
                   <option value="all">All Categories</option>
-                  {categories.map((c) => (
+                  {Array.from(new Set(categories.length > 0 ? categories : [
+                    'Ritual Oils', 'Daily Rituals', 'Aromatherapy', 'Herbal Blends', 'Skin Rituals', 'Home Rituals'
+                  ])).map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
-                  <option value="Ritual Oils">Ritual Oils</option>
-                  <option value="Daily Rituals">Daily Rituals</option>
-                  <option value="Aromatherapy">Aromatherapy</option>
-                  <option value="Herbal Blends">Herbal Blends</option>
-                  <option value="Skin Rituals">Skin Rituals</option>
-                  <option value="Home Rituals">Home Rituals</option>
                 </select>
 
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
                   style={{
-                    padding: '8px 12px',
-                    fontSize: '12px',
+                    padding: '6px 10px',
+                    fontSize: '11px',
                     border: '1px solid #deddd4',
                     background: '#fff',
                     borderRadius: '2px',
+                    flex: '1',
                   }}
                 >
-                  <option value="all">All Statuses</option>
+                  <option value="all">All Status</option>
                   <option value="published">Published</option>
                   <option value="draft">Draft</option>
                   <option value="archived">Archived</option>
@@ -411,23 +655,119 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onClick={onRefreshProducts}
                   title="Synchronize from Database"
                   style={{
-                    padding: '8px 12px',
+                    padding: '6px 10px',
                     border: '1px solid #deddd4',
                     background: '#fff',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
+                    gap: '4px',
+                    fontSize: '11px',
+                    borderRadius: '2px',
                   }}
                 >
-                  <RefreshCw size={13} /> Sync
+                  <RefreshCw size={12} /> Sync
                 </button>
               </div>
             </div>
 
-            {/* Products Table */}
-            <div style={{ background: '#fff', border: '1px solid #e7e5dc', overflowX: 'auto' }}>
+            {/* MOBILE / TABLET VIEW: COMPACT PRODUCT CARDS */}
+            <div className="admin-card-grid-view">
+              {filteredProducts.length === 0 ? (
+                <div style={{ gridColumn: '1/-1', background: '#fff', padding: '30px', textAlign: 'center', color: '#77786e', borderRadius: '4px' }}>
+                  No products found.
+                </div>
+              ) : (
+                filteredProducts.map((p) => {
+                  const hasImage = p.thumbnail || (p.images && p.images[0]);
+                  return (
+                    <div className="admin-compact-card" key={p.id}>
+                      <div className="admin-card-media">
+                        {hasImage ? (
+                          <img
+                            src={hasImage}
+                            alt={p.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div
+                            className={`product-art art-${p.accent || 'sage'}`}
+                            style={{ width: '100%', height: '100%', padding: '6px' }}
+                          >
+                            <div className="art-orb" />
+                            <div className="art-bottle" style={{ transform: 'scale(0.55)' }}>
+                              <span>KAAR</span>
+                              <small>AYURVEDA</small>
+                            </div>
+                            <div className="art-leaf leaf-one"><Leaf size={24} /></div>
+                            <div className="art-leaf leaf-two"><Leaf size={18} /></div>
+                          </div>
+                        )}
+                        <span
+                          style={{
+                            position: 'absolute',
+                            top: '6px',
+                            right: '6px',
+                            fontSize: '9px',
+                            padding: '2px 5px',
+                            borderRadius: '2px',
+                            background: p.status === 'draft' ? '#fef3c7' : '#dcfce7',
+                            color: p.status === 'draft' ? '#92400e' : '#166534',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {p.status || 'published'}
+                        </span>
+                      </div>
+
+                      <div className="admin-card-body">
+                        <span className="admin-card-cat">{p.category}</span>
+                        <h4 className="admin-card-name" title={p.name}>{p.name}</h4>
+
+                        <div className="admin-card-price-row">
+                          <span className="admin-card-price">{money(p.price)}</span>
+                          {p.compareAt && (
+                            <span className="admin-card-compare">{money(p.compareAt)}</span>
+                          )}
+                        </div>
+
+                        <div style={{ fontSize: '10px', color: '#77786e', marginBottom: '8px' }}>
+                          Stock: <strong>{p.stockQuantity ?? 50}</strong>
+                        </div>
+
+                        {/* Action buttons right inside the card */}
+                        <div className="admin-card-actions">
+                          <button
+                            className="admin-card-btn"
+                            onClick={() => handleOpenEdit(p)}
+                            title="Edit"
+                          >
+                            <Edit2 size={12} /> Edit
+                          </button>
+                          <button
+                            className="admin-card-btn live"
+                            onClick={() => onViewProductLive(p)}
+                            title="View on store"
+                          >
+                            <ExternalLink size={12} />
+                          </button>
+                          <button
+                            className="admin-card-btn delete"
+                            onClick={() => setDeletingProductId(p.id)}
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* DESKTOP TABLE VIEW (1024px and above) */}
+            <div className="admin-table-view">
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: '#faf9f5', borderBottom: '1px solid #e7e5dc', color: '#686a60' }}>
@@ -615,23 +955,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div
               style={{
                 background: '#fff',
-                padding: '18px 24px',
+                padding: '14px 16px',
                 border: '1px solid #e7e5dc',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '20px',
-                marginBottom: '24px',
+                gap: '12px',
+                marginBottom: '20px',
+                flexWrap: 'wrap',
+                borderRadius: '4px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                <Search size={16} color="#77786e" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '180px' }}>
+                <Search size={15} color="#77786e" />
                 <input
                   type="text"
-                  placeholder="Search orders by Order ID, customer, phone, or delivery address..."
+                  placeholder="Search orders..."
                   value={orderSearchQuery}
                   onChange={(e) => setOrderSearchQuery(e.target.value)}
-                  style={{ border: 'none', outline: 'none', fontSize: '13px', width: '100%' }}
+                  style={{ border: 'none', outline: 'none', fontSize: '12px', width: '100%' }}
                 />
               </div>
 
@@ -640,23 +982,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onClick={fetchOrders}
                 disabled={loadingOrders}
                 style={{
-                  padding: '8px 14px',
+                  padding: '6px 12px',
                   border: '1px solid #deddd4',
                   background: '#fff',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  fontSize: '12px',
+                  fontSize: '11px',
+                  borderRadius: '2px',
                 }}
               >
-                <RefreshCw size={13} /> {loadingOrders ? 'Loading...' : 'Refresh Orders'}
+                <RefreshCw size={12} /> {loadingOrders ? 'Loading...' : 'Refresh'}
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '16px' }}>
+            <div style={{ display: 'grid', gap: '14px' }}>
               {filteredOrders.length === 0 ? (
-                <div style={{ background: '#fff', padding: '40px', textAlign: 'center', color: '#77786e', border: '1px solid #e7e5dc' }}>
+                <div style={{ background: '#fff', padding: '30px', textAlign: 'center', color: '#77786e', border: '1px solid #e7e5dc', borderRadius: '4px' }}>
                   No customer orders logged yet.
                 </div>
               ) : (
@@ -666,7 +1009,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     style={{
                       background: '#fff',
                       border: '1px solid #e7e5dc',
-                      padding: '24px',
+                      padding: '16px',
+                      borderRadius: '4px',
                     }}
                   >
                     <div
@@ -675,74 +1019,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
                         borderBottom: '1px solid #f2f0e9',
-                        paddingBottom: '14px',
-                        marginBottom: '16px',
+                        paddingBottom: '10px',
+                        marginBottom: '12px',
                         flexWrap: 'wrap',
-                        gap: '12px',
+                        gap: '8px',
                       }}
                     >
                       <div>
-                        <span className="eyebrow" style={{ color: '#4d5d48' }}>ORDER REFERENCE</span>
-                        <h3 style={{ fontSize: '18px', margin: '4px 0 0', fontWeight: 600 }}>{ord.id}</h3>
-                        <div style={{ fontSize: '12px', color: '#77786e', marginTop: '4px' }}>
-                          Placed on: {new Date(ord.createdAt).toLocaleString('en-IN')}
+                        <span className="eyebrow" style={{ color: '#4d5d48', fontSize: '9px' }}>ORDER REFERENCE</span>
+                        <h3 style={{ fontSize: '15px', margin: '2px 0 0', fontWeight: 600 }}>{ord.id}</h3>
+                        <div style={{ fontSize: '11px', color: '#77786e', marginTop: '2px' }}>
+                          Placed: {new Date(ord.createdAt).toLocaleDateString('en-IN')}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '12px', color: '#77786e' }}>Logistics Status:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', color: '#77786e' }}>Status:</span>
                         <select
                           value={ord.orderStatus || 'received'}
                           onChange={(e) => handleOrderStatusChange(ord.id, e.target.value as Order['orderStatus'])}
                           style={{
-                            padding: '6px 10px',
+                            padding: '4px 8px',
                             border: '1px solid #deddd4',
                             background: '#faf9f5',
-                            fontSize: '12px',
+                            fontSize: '11px',
                             fontWeight: 500,
+                            borderRadius: '2px',
                           }}
                         >
-                          <option value="received">Order Received</option>
-                          <option value="processing">In Preparation</option>
-                          <option value="shipped">Dispatched / Shipped</option>
+                          <option value="received">Received</option>
+                          <option value="processing">Processing</option>
+                          <option value="shipped">Shipped</option>
                           <option value="delivered">Delivered</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
                       {/* Customer info */}
-                      <div style={{ fontSize: '12px', lineHeight: '1.7', color: '#44463e', background: '#faf9f5', padding: '16px' }}>
+                      <div style={{ fontSize: '11px', lineHeight: '1.6', color: '#44463e', background: '#faf9f5', padding: '12px', borderRadius: '3px' }}>
                         <div><strong>Customer:</strong> {ord.customerName}</div>
                         <div><strong>Contact:</strong> {ord.contact}</div>
-                        <div><strong>Shipping Address:</strong> {ord.address}</div>
-                        <div><strong>Payment Method:</strong> {ord.paymentMethod || 'Razorpay Prepaid'}</div>
-                        <div>
-                          <strong>Payment Status:</strong>{' '}
-                          <span
-                            style={{
-                              textTransform: 'uppercase',
-                              fontWeight: 600,
-                              color: ord.paymentStatus === 'paid' ? '#166534' : '#991b1b',
-                            }}
-                          >
-                            {ord.paymentStatus}
-                          </span>
-                        </div>
-                        {ord.razorpayPaymentId && (
-                          <div style={{ marginTop: '4px', fontSize: '11px', color: '#2b502d' }}>
-                            <strong>Razorpay Payment ID:</strong> {ord.razorpayPaymentId}
-                          </div>
-                        )}
+                        <div><strong>Address:</strong> {ord.address}</div>
+                        <div><strong>Payment:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 600, color: ord.paymentStatus === 'paid' ? '#166534' : '#991b1b' }}>{ord.paymentStatus}</span></div>
                       </div>
 
                       {/* Items */}
                       <div>
-                        <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '10px', color: '#40433a' }}>
-                          Purchased Items ({ord.items.length})
+                        <div style={{ fontSize: '11px', fontWeight: 600, marginBottom: '6px', color: '#40433a' }}>
+                          Items ({ord.items.length})
                         </div>
-                        <div style={{ display: 'grid', gap: '8px' }}>
+                        <div style={{ display: 'grid', gap: '6px' }}>
                           {ord.items.map((item, i) => {
                             const itemName = 'product' in item ? item.product.name : item.name;
                             const itemPrice = 'product' in item ? item.product.price : item.price;
@@ -753,8 +1081,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 style={{
                                   display: 'flex',
                                   justifyContent: 'space-between',
-                                  fontSize: '12px',
-                                  paddingBottom: '6px',
+                                  fontSize: '11px',
+                                  paddingBottom: '4px',
                                   borderBottom: '1px solid #f6f5f0',
                                 }}
                               >
@@ -768,14 +1096,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           style={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            marginTop: '14px',
-                            paddingTop: '10px',
+                            marginTop: '10px',
+                            paddingTop: '6px',
                             borderTop: '1px solid #e7e5dc',
-                            fontSize: '14px',
+                            fontSize: '13px',
                             fontWeight: 600,
                           }}
                         >
-                          <span>Total Amount:</span>
+                          <span>Total:</span>
                           <span>{money(ord.total)}</span>
                         </div>
                       </div>
@@ -787,114 +1115,217 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
-        {/* ===================== GOOGLE SHEETS TAB ===================== */}
-        {activeTab === 'sheets' && (
-          <div style={{ background: '#fff', border: '1px solid #e7e5dc', padding: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div>
-                <span className="eyebrow" style={{ color: '#2e7d32' }}>CONNECTED SPREADSHEET</span>
-                <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: 500 }}>
-                  Life Holics Traffic Data (Spreadsheet ID: 1couKMsGuunmNDY89HJfCXgRljxytHOqMgqDF0rGYh8k)
-                </h3>
+        {/* ===================== REVIEWS & TESTIMONIALS TAB ===================== */}
+        {activeTab === 'reviews' && (
+          <div>
+            <div className="admin-filter-bar">
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('all')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    borderRadius: '2px',
+                    border: '1px solid',
+                    borderColor: reviewFilter === 'all' ? '#354332' : '#deddd4',
+                    background: reviewFilter === 'all' ? '#354332' : '#fff',
+                    color: reviewFilter === 'all' ? '#fff' : '#444',
+                    cursor: 'pointer',
+                  }}
+                >
+                  All ({reviews.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('pending')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    borderRadius: '2px',
+                    border: '1px solid',
+                    borderColor: reviewFilter === 'pending' ? '#b45309' : '#deddd4',
+                    background: reviewFilter === 'pending' ? '#b45309' : '#fff',
+                    color: reviewFilter === 'pending' ? '#fff' : '#444',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Pending ({reviews.filter((r) => r.status === 'pending').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter('approved')}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    borderRadius: '2px',
+                    border: '1px solid',
+                    borderColor: reviewFilter === 'approved' ? '#15803d' : '#deddd4',
+                    background: reviewFilter === 'approved' ? '#15803d' : '#fff',
+                    color: reviewFilter === 'approved' ? '#fff' : '#444',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Approved ({reviews.filter((r) => r.status === 'approved').length})
+                </button>
               </div>
-              <a
-                href="https://docs.google.com/spreadsheets/d/1couKMsGuunmNDY89HJfCXgRljxytHOqMgqDF0rGYh8k"
-                target="_blank"
-                rel="noreferrer"
-                className="button button-outline"
-                style={{ fontSize: '12px', height: '36px' }}
-              >
-                <ExternalLink size={13} style={{ marginRight: '6px' }} /> Open Google Spreadsheet
-              </a>
+
+              <div style={{ marginLeft: 'auto' }}>
+                <button
+                  onClick={fetchReviews}
+                  disabled={loadingReviews}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    padding: '6px 12px',
+                    border: '1px solid #deddd4',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    borderRadius: '2px',
+                  }}
+                >
+                  <RefreshCw size={13} className={loadingReviews ? 'spin' : ''} /> Refresh
+                </button>
+              </div>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#55584f', lineHeight: '1.6', marginBottom: '24px' }}>
-              Whenever customers add rituals to their cart or finalize Razorpay orders, payloads are synchronized into your connected Google Sheet tabs (<strong>Cart</strong> and <strong>Orders</strong>).
-            </p>
+            {loadingReviews ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#77786e' }}>
+                Loading customer reviews...
+              </div>
+            ) : reviews.length === 0 ? (
+              <div style={{ padding: '60px', textAlign: 'center', background: '#fff', border: '1px solid #e7e5dc' }}>
+                <MessageSquare size={36} color="#bbb" style={{ margin: '0 auto 12px' }} />
+                <h4 style={{ margin: '0 0 4px', fontSize: '15px' }}>No reviews found</h4>
+                <p style={{ color: '#77786e', fontSize: '12px', margin: 0 }}>
+                  Customer reviews submitted on product pages will appear here for your moderation.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '14px' }}>
+                {reviews
+                  .filter((r) => {
+                    if (reviewFilter === 'pending') return r.status === 'pending';
+                    if (reviewFilter === 'approved') return r.status === 'approved';
+                    return true;
+                  })
+                  .map((rev) => (
+                    <div
+                      key={rev.id}
+                      style={{
+                        background: '#fff',
+                        border: '1px solid #e7e5dc',
+                        borderRadius: '4px',
+                        padding: '18px 20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        borderLeft:
+                          rev.status === 'approved'
+                            ? '4px solid #16a34a'
+                            : '4px solid #d97706',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <strong style={{ fontSize: '14px', color: '#2d3029' }}>{rev.userName}</strong>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                textTransform: 'uppercase',
+                                padding: '2px 8px',
+                                borderRadius: '3px',
+                                fontWeight: 600,
+                                background: rev.status === 'approved' ? '#dcfce7' : '#fef3c7',
+                                color: rev.status === 'approved' ? '#166534' : '#92400e',
+                              }}
+                            >
+                              {rev.status}
+                            </span>
+                          </div>
 
-            <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
-              Recent Orders Synchronized to "Orders" Tab ({sheetsSyncLogs.length})
-            </h4>
+                          <div style={{ fontSize: '11px', color: '#77786e', marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span>Product: <strong style={{ color: '#354332' }}>{rev.productName || 'General'}</strong></span>
+                            <span>Date: {new Date(rev.createdAt).toLocaleDateString('en-GB')}</span>
+                          </div>
+                        </div>
 
-            <div style={{ overflowX: 'auto', border: '1px solid #f0eee5' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: '#faf9f5', borderBottom: '1px solid #e7e5dc' }}>
-                    <th style={{ padding: '10px 14px' }}>Order ID</th>
-                    <th style={{ padding: '10px 14px' }}>Customer</th>
-                    <th style={{ padding: '10px 14px' }}>Contact</th>
-                    <th style={{ padding: '10px 14px' }}>Items</th>
-                    <th style={{ padding: '10px 14px' }}>Amount</th>
-                    <th style={{ padding: '10px 14px' }}>Payment Status</th>
-                    <th style={{ padding: '10px 14px' }}>Synced At</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sheetsSyncLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#77786e' }}>
-                        No orders recorded in synchronization buffer yet. Place a test checkout to see entries appear.
-                      </td>
-                    </tr>
-                  ) : (
-                    sheetsSyncLogs.map((log: GoogleSheetsOrderPayload, idx: number) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f4f3ed' }}>
-                        <td style={{ padding: '10px 14px', fontWeight: 500 }}>{log.orderId}</td>
-                        <td style={{ padding: '10px 14px' }}>{log.customerName}</td>
-                        <td style={{ padding: '10px 14px' }}>{log.email || log.phone}</td>
-                        <td style={{ padding: '10px 14px' }}>{log.productNames}</td>
-                        <td style={{ padding: '10px 14px', fontWeight: 600 }}>{money(log.total)}</td>
-                        <td style={{ padding: '10px 14px', color: '#2e7d32' }}>{log.paymentStatus}</td>
-                        <td style={{ padding: '10px 14px', color: '#77786e' }}>{log.orderDate}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                        {/* Rating Stars */}
+                        <div style={{ display: 'flex', gap: '2px', color: '#c49a45' }}>
+                          {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                            <Star key={i} size={14} fill="#c49a45" />
+                          ))}
+                        </div>
+                      </div>
 
-        {/* ===================== EMAILS TAB ===================== */}
-        {activeTab === 'emails' && (
-          <div style={{ background: '#fff', border: '1px solid #e7e5dc', padding: '28px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <span className="eyebrow" style={{ color: '#56664d' }}>EMAIL AUTOMATIONS DISPATCH LOG</span>
-              <h3 style={{ fontSize: '20px', margin: '4px 0 0', fontWeight: 500 }}>
-                Customer & Administrator Notifications
-              </h3>
-            </div>
+                      {/* Review text */}
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: '13px',
+                          lineHeight: '1.6',
+                          color: '#3d4036',
+                          background: '#faf9f5',
+                          padding: '12px 14px',
+                          borderRadius: '3px',
+                          border: '1px solid #f0ede4',
+                        }}
+                      >
+                        “{rev.review}”
+                      </p>
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {emailLogs.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#77786e' }}>
-                  No automated emails logged yet. Emails trigger upon Razorpay order completion and status updates.
-                </div>
-              ) : (
-                emailLogs.map((log: EmailLog) => (
-                  <div
-                    key={log.id}
-                    style={{
-                      border: '1px solid #f0eee5',
-                      padding: '16px 20px',
-                      background: '#faf9f5',
-                      borderRadius: '2px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '13px' }}>{log.subject}</span>
-                      <span style={{ fontSize: '11px', color: '#2e7d32', fontWeight: 500 }}>● {log.status.toUpperCase()}</span>
+                      {/* Admin Decision Actions */}
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center', paddingTop: '4px' }}>
+                        {rev.status !== 'approved' && (
+                          <button
+                            type="button"
+                            onClick={() => handleApproveReview(rev.id)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: '#15803d',
+                              color: '#fff',
+                              border: 'none',
+                              padding: '7px 14px',
+                              borderRadius: '3px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <CheckCircle size={14} /> Approve Review
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleRejectReview(rev.id)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            padding: '7px 14px',
+                            borderRadius: '3px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                          title="Reject and immediately delete this review"
+                        >
+                          <XCircle size={14} /> Reject & Delete
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#55584f' }}>
-                      <strong>Recipient:</strong> {log.to} &nbsp;|&nbsp; <strong>Time:</strong> {new Date(log.sentAt).toLocaleString('en-IN')}
-                    </div>
-                    <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#686a60' }}>
-                      {log.bodySummary}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -918,26 +1349,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div
             style={{
               background: '#fff',
-              padding: '30px',
-              maxWidth: '480px',
-              width: '100%',
+              padding: '24px',
+              maxWidth: '440px',
+              width: '90%',
               margin: 'auto',
-              borderRadius: '2px',
+              borderRadius: '4px',
               boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#b91c1c', marginBottom: '14px' }}>
-              <AlertTriangle size={24} />
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Confirm Product Deletion</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#b91c1c', marginBottom: '12px' }}>
+              <AlertTriangle size={20} />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Confirm Product Deletion</h3>
             </div>
-            <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#55584f' }}>
+            <p style={{ fontSize: '12px', lineHeight: '1.6', color: '#55584f' }}>
               Are you sure you want to permanently remove this product from the store? Past orders referencing this item will continue to be safely preserved.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
               <button
                 type="button"
                 className="text-button"
                 onClick={() => setDeletingProductId(null)}
+                style={{ fontSize: '12px' }}
               >
                 Cancel
               </button>
@@ -945,7 +1377,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 type="button"
                 className="button button-dark"
                 onClick={handleConfirmDelete}
-                style={{ background: '#b91c1c', borderColor: '#b91c1c' }}
+                style={{ background: '#b91c1c', borderColor: '#b91c1c', height: '36px', fontSize: '12px' }}
               >
                 Delete Product
               </button>

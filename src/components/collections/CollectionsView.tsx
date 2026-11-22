@@ -382,13 +382,30 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({
                         )}
                       </div>
 
-                      <button
-                        className="button button-dark"
-                        onClick={() => onAddToCart(product)}
-                        style={{ height: '34px', padding: '0 14px', fontSize: '12px' }}
-                      >
-                        Add <Plus size={14} style={{ marginLeft: '4px' }} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => onViewProduct(product)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '11px',
+                            color: '#55694b',
+                            textDecoration: 'underline',
+                            cursor: 'pointer',
+                            padding: '4px',
+                          }}
+                        >
+                          Review
+                        </button>
+                        <button
+                          className="button button-dark"
+                          onClick={() => onAddToCart(product)}
+                          style={{ height: '34px', padding: '0 14px', fontSize: '12px' }}
+                        >
+                          Add <Plus size={14} style={{ marginLeft: '4px' }} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -45,6 +45,9 @@ To connect or switch to your existing Firebase project (`kaar-d3bcd`):
 # List all Firebase projects accessible by your account
 firebase projects:list
 
+## Initialize Firebase
+firebase init
+
 # Select existing project
 firebase use kaar-d3bcd
 

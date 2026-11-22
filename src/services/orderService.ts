@@ -106,8 +106,11 @@ export async function getAllOrders(): Promise<Order[]> {
       snapshot.forEach((d) => list.push({ id: d.id, ...(d.data() as Omit<Order, 'id'>) }));
       return list;
     }
-  } catch (err) {
-    console.warn('Firestore getAllOrders error, returning local:', err);
+  } catch (err: unknown) {
+    const error = err as { code?: string };
+    if (error?.code !== 'permission-denied') {
+      console.warn('Firestore getAllOrders error, returning local:', err);
+    }
   }
   return getLocalOrders();
 }

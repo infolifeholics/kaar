@@ -277,15 +277,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   onChange={(e) => setCategory(e.target.value)}
                   style={{ border: '1px solid #deddd4', padding: '10px 12px', height: '42px', fontSize: '13px', background: '#fff' }}
                 >
-                  {categories.map((c) => (
+                  {Array.from(new Set(categories.length > 0 ? categories : [
+                    'Ritual Oils', 'Daily Rituals', 'Aromatherapy', 'Herbal Blends', 'Skin Rituals', 'Home Rituals'
+                  ])).map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
-                  <option value="Ritual Oils">Ritual Oils</option>
-                  <option value="Daily Rituals">Daily Rituals</option>
-                  <option value="Aromatherapy">Aromatherapy</option>
-                  <option value="Herbal Blends">Herbal Blends</option>
-                  <option value="Skin Rituals">Skin Rituals</option>
-                  <option value="Home Rituals">Home Rituals</option>
                 </select>
               </label>
 

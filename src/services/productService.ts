@@ -61,7 +61,10 @@ export function subscribeToProducts(callback: (products: Product[]) => void): ()
         }
       },
       (error) => {
-        console.warn('Firestore products subscription error (using fallback):', error.message);
+        // Fallback to local storage gracefully if Firestore rules are being published or offline
+        if (error.code !== 'permission-denied') {
+          console.warn('Firestore products subscription error (using fallback):', error.message);
+        }
         callback(getLocalProducts());
       }
     );

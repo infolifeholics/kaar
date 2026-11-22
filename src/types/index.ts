@@ -137,3 +137,15 @@ export interface GoogleSheetsOrderPayload {
   orderDate: string;
   address: string;
 }
+
+export interface Review {
+  id: string;
+  productId?: string | number;
+  productName?: string;
+  userName: string;
+  review: string;
+  rating?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt?: string;
+}

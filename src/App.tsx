@@ -17,6 +17,8 @@ import {
   Truck,
   X,
   ShieldAlert,
+  Compass,
+  User,
 } from 'lucide-react';
 import { Product, CartItem, CheckoutDetails, Order } from './types';
 import { INITIAL_CATEGORIES } from './data/initialProducts';
@@ -29,9 +31,12 @@ import { openRazorpayCheckout } from './services/razorpayService';
 
 import SmartOrderTrackingModal from './components/tracking/SmartOrderTrackingModal';
 import AdminDashboard from './components/admin/AdminDashboard';
-import LatestProductsSlider from './components/slider/LatestProductsSlider';
+import HeroProductShowcase from './components/slider/HeroProductShowcase';
 import ProductDetailModal from './components/ProductDetailModal';
 import CollectionsView from './components/collections/CollectionsView';
+import TestimonialTicker from './components/testimonials/TestimonialTicker';
+import { Review } from './types';
+import { subscribeToApprovedReviews, getLocalReviews } from './services/reviewService';
 
 const emptyCheckoutDetails: CheckoutDetails = {
   contact: '',
@@ -166,10 +171,23 @@ function App() {
   const [email, setEmail] = useState('');
   const [newsletterDone, setNewsletterDone] = useState(false);
 
+  // Reviews from database (approved community reviews)
+  const [reviews, setReviews] = useState<Review[]>(() =>
+    getLocalReviews().filter((r) => r.status === 'approved')
+  );
+
   // Subscribe to real-time products
   useEffect(() => {
     const unsub = subscribeToProducts((loaded) => {
       setProducts(loaded);
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to real-time approved reviews
+  useEffect(() => {
+    const unsub = subscribeToApprovedReviews((loaded) => {
+      setReviews(loaded);
     });
     return () => unsub();
   }, []);
@@ -396,20 +414,26 @@ function App() {
           <Logo />
         </button>
         <nav className={menuOpen ? 'nav-open' : ''}>
-          <button onClick={() => scrollTo('shop')}>Shop</button>
-          <button onClick={() => openCollectionsCategory('all')}>Collections</button>
-          <button onClick={() => scrollTo('philosophy')}>Our philosophy</button>
-          <button onClick={() => setQuizOpen(true)} className="quiz-nav">
+          <button onClick={() => { scrollTo('shop'); setMenuOpen(false); }}>Shop</button>
+          <button onClick={() => { openCollectionsCategory('all'); setMenuOpen(false); }}>Collections</button>
+          <button onClick={() => { scrollTo('philosophy'); setMenuOpen(false); }}>Our philosophy</button>
+          <button onClick={() => { setQuizOpen(true); setMenuOpen(false); }} className="quiz-nav">
             <Sparkles size={14} />Daily wellness quiz
           </button>
-          <button onClick={() => scrollTo('journal')}>Journal</button>
+          <button onClick={() => { scrollTo('journal'); setMenuOpen(false); }}>Journal</button>
+          <button
+            onClick={() => { openOrderLookup(); setMenuOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#354332', fontWeight: 600 }}
+          >
+            <CircleUserRound size={16} /> Track Order / Account
+          </button>
           {adminAuth.isAdmin && (
             <button
-              onClick={() => setAdminOpen(true)}
+              onClick={() => { setAdminOpen(true); setMenuOpen(false); }}
               style={{
                 background: '#41523c',
                 color: '#fff',
-                padding: '4px 10px',
+                padding: '6px 12px',
                 borderRadius: '2px',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -422,13 +446,14 @@ function App() {
           )}
         </nav>
         <div className="header-actions">
-          <button onClick={() => setSearchOpen(true)} aria-label="Search">
+          <button onClick={() => setSearchOpen(true)} aria-label="Search" className="desktop-search-btn">
             <Search size={19} />
           </button>
           <button
             onClick={() => openOrderLookup()}
             aria-label="Sign in or track an order"
             title="Track Order / Account"
+            className="header-account-btn"
           >
             <CircleUserRound size={19} />
           </button>
@@ -522,25 +547,11 @@ function App() {
               </div>
             </div>
             <div className="hero-visual">
-              <div className="hero-card hero-card-main">
-                <div className="sun-disc" />
-                <div className="hero-vessel">
-                  <span>KAAR</span>
-                  <small>ABHYANGA OIL</small>
-                </div>
-                <div className="botanical botanical-left">
-                  <Leaf size={74} />
-                  <Leaf size={45} />
-                </div>
-                <div className="botanical botanical-right">
-                  <Leaf size={84} />
-                  <Leaf size={36} />
-                </div>
-              </div>
-              <div className="hero-caption">
-                <span>01 / 03</span>
-                <span>A ritual for coming home to yourself.</span>
-              </div>
+              <HeroProductShowcase
+                products={products}
+                onViewProduct={(p) => setSelectedProduct(p)}
+                onAddToCart={(p) => addToCart(p, 1)}
+              />
             </div>
           </section>
 
@@ -550,13 +561,6 @@ function App() {
               CARE, CONSCIOUSLY <span>✦</span> BOTANICAL INTELLIGENCE <span>✦</span> ROOTED IN TRADITION <span>✦</span> CARE, CONSCIOUSLY <span>✦</span>
             </div>
           </section>
-
-          {/* ===================== DYNAMIC 5-PRODUCT SLIDER ===================== */}
-          <LatestProductsSlider
-            products={products}
-            onViewProduct={(p) => setSelectedProduct(p)}
-            onAddToCart={(p) => addToCart(p, 1)}
-          />
 
           {/* Shopping Journey Steps */}
           <section className="shopping-journey" aria-label="How shopping works">
@@ -746,24 +750,6 @@ function App() {
             </div>
           </section>
 
-          {/* Testimonials */}
-          <section className="testimonials">
-            <div className="eyebrow">WORDS FROM THE COMMUNITY</div>
-            <div className="quote-mark">“</div>
-            <blockquote>
-              It has become my favourite part of the evening — a small, beautiful reminder to slow down.
-            </blockquote>
-            <div className="quote-meta">
-              <span>Customer Review</span>
-              <span>Early Kaar community</span>
-            </div>
-            <div className="dots">
-              <span className="active" />
-              <span />
-              <span />
-            </div>
-          </section>
-
           {/* Journal */}
           <section className="section journal" id="journal">
             <div className="section-heading">
@@ -800,6 +786,13 @@ function App() {
               </article>
             </div>
           </section>
+
+          {/* Testimonials - Continuous slowly scrolling community cards */}
+          <TestimonialTicker
+            reviews={reviews}
+            products={products}
+            onOpenProduct={(p) => setSelectedProduct(p)}
+          />
 
           {/* FAQ */}
           <FAQ />
@@ -1050,6 +1043,54 @@ function App() {
           }}
         />
       )}
+
+      {/* Mobile Bottom Navigation Bar (Shop, Collections, Cart, Account) */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <button
+          type="button"
+          className={`mobile-nav-item ${currentView === 'home' ? 'active' : ''}`}
+          onClick={() => {
+            setCurrentView('home');
+            scrollTo('shop');
+          }}
+        >
+          <Leaf size={19} />
+          <span>Shop</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item ${currentView === 'collections' ? 'active' : ''}`}
+          onClick={() => {
+            openCollectionsCategory('all');
+            scrollTo('top');
+          }}
+        >
+          <Compass size={19} />
+          <span>Collections</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-item mobile-nav-cart"
+          onClick={() => setCartOpen(true)}
+        >
+          <div className="mobile-nav-cart-wrapper">
+            <ShoppingBag size={19} />
+            {cartCount > 0 && <span className="mobile-nav-badge">{cartCount}</span>}
+          </div>
+          <span>Cart</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-nav-item"
+          onClick={() => openOrderLookup()}
+        >
+          <User size={19} />
+          <span>Account</span>
+        </button>
+      </nav>
     </div>
   );
 }
@@ -1428,9 +1469,27 @@ function ProductCard({
           <Plus size={18} />
         </button>
       </div>
-      <div className="price-row">
-        <span>{money(product.price)}</span>
-        {product.compareAt && <del>{money(product.compareAt)}</del>}
+      <div className="price-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <span>{money(product.price)}</span>
+          {product.compareAt && <del>{money(product.compareAt)}</del>}
+        </div>
+        <button
+          type="button"
+          onClick={() => onView(product)}
+          style={{
+            fontSize: '11px',
+            color: '#34452b',
+            textDecoration: 'underline',
+            background: 'transparent',
+            border: 'none',
+            padding: '2px 4px',
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
+        >
+          Write Review
+        </button>
       </div>
     </article>
   );

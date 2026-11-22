@@ -213,3 +213,34 @@
     padding: 0 2px;
   }
 }
+
+/* Prevent parent containers from breaking position: sticky */
+html, body {
+  overflow-x: clip !important;
+}
+
+.app-shell {
+  overflow: visible !important;
+  overflow-x: clip !important;
+  position: relative !important;
+}
+
+/* Ensure announcement banner and site-header stay pinned together or site-header remains permanently sticky */
+.site-header {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+  background: rgba(248, 246, 240, 0.98) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+@media (max-width: 768px) {
+  .site-header {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+  }
+}

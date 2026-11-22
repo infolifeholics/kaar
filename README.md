@@ -173,7 +173,7 @@ firebase deploy --only hosting
 
 ```bash
 git add .
-git commit -m "update readme.md"
+git commit -m "Fix: header ui and botton mobile view fix"
 git push
 ```
 

@@ -152,7 +152,7 @@ export const SmartOrderTrackingModal: React.FC<SmartOrderTrackingModalProps> = (
             >
               <strong>Security Protocol:</strong>
               <p style={{ margin: '6px 0 0' }}>
-                Only the authorized Google account <code>{ADMIN_EMAIL}</code> can manage products and access real-time customer orders.
+                If you have not Permission of this login please do not try to login it will not work.
               </p>
             </div>
 

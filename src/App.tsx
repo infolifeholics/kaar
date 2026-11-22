@@ -19,6 +19,9 @@ import {
   ShieldAlert,
   Compass,
   User,
+  Phone,
+  Mail,
+  FileText,
 } from 'lucide-react';
 import { Product, CartItem, CheckoutDetails, Order } from './types';
 import { INITIAL_CATEGORIES } from './data/initialProducts';
@@ -170,6 +173,9 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [newsletterDone, setNewsletterDone] = useState(false);
+
+  // Policy Modal state ('shipping' | 'cancellation' | 'contact' | null)
+  const [activePolicyModal, setActivePolicyModal] = useState<'shipping' | 'cancellation' | 'contact' | null>(null);
 
   // Reviews from database (approved community reviews)
   const [reviews, setReviews] = useState<Review[]>(() =>
@@ -397,13 +403,7 @@ function App() {
         >
           <Menu size={21} />
         </button>
-        <button
-          className="mobile-search"
-          onClick={() => setSearchOpen(true)}
-          aria-label="Search"
-        >
-          <Search size={20} />
-        </button>
+
         <button
           className="logo-button"
           onClick={() => {
@@ -413,20 +413,36 @@ function App() {
         >
           <Logo />
         </button>
+
+        <button
+          className="mobile-search"
+          onClick={() => setSearchOpen(true)}
+          aria-label="Search"
+        >
+          <Search size={20} />
+        </button>
         <nav className={menuOpen ? 'nav-open' : ''}>
-          <button onClick={() => { scrollTo('shop'); setMenuOpen(false); }}>Shop</button>
-          <button onClick={() => { openCollectionsCategory('all'); setMenuOpen(false); }}>Collections</button>
-          <button onClick={() => { scrollTo('philosophy'); setMenuOpen(false); }}>Our philosophy</button>
-          <button onClick={() => { setQuizOpen(true); setMenuOpen(false); }} className="quiz-nav">
-            <Sparkles size={14} />Daily wellness quiz
+          <button className="nav-link-btn" onClick={() => { scrollTo('shop'); setMenuOpen(false); }}>
+            <Sparkles size={14} className="nav-sparkle" />
+            <span className="nav-text">Shop</span>
           </button>
-          <button onClick={() => { scrollTo('journal'); setMenuOpen(false); }}>Journal</button>
-          <button
-            onClick={() => { openOrderLookup(); setMenuOpen(false); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#354332', fontWeight: 600 }}
-          >
-            <CircleUserRound size={16} /> Track Order / Account
+          <button className="nav-link-btn" onClick={() => { openCollectionsCategory('all'); setMenuOpen(false); }}>
+            <Sparkles size={14} className="nav-sparkle" />
+            <span className="nav-text">Collections</span>
           </button>
+          <button className="nav-link-btn" onClick={() => { scrollTo('philosophy'); setMenuOpen(false); }}>
+            <Sparkles size={14} className="nav-sparkle" />
+            <span className="nav-text">Our philosophy</span>
+          </button>
+          <button className="nav-link-btn quiz-nav" onClick={() => { setQuizOpen(true); setMenuOpen(false); }}>
+            <Sparkles size={14} className="nav-sparkle" />
+            <span className="nav-text">Daily wellness quiz</span>
+          </button>
+          <button className="nav-link-btn" onClick={() => { scrollTo('journal'); setMenuOpen(false); }}>
+            <Sparkles size={14} className="nav-sparkle" />
+            <span className="nav-text">Journal</span>
+          </button>
+
           {adminAuth.isAdmin && (
             <button
               onClick={() => { setAdminOpen(true); setMenuOpen(false); }}
@@ -531,22 +547,38 @@ function App() {
           {/* Hero Section */}
           <section className="hero">
             <div className="hero-copy">
-              <div className="eyebrow"><span className="eyebrow-line" /> ROOTED IN ENERGY</div>
-              <h1>Return to your <em>natural</em> rhythm.</h1>
-              <p>
-                Ayurvedic rituals for the way you want to feel — consciously sourced, beautifully made,
-                and designed for everyday living.
-              </p>
-              <div className="hero-actions">
-                <button className="button button-dark" onClick={() => scrollTo('shop')}>
-                  Shop rituals <ArrowRight size={16} />
-                </button>
-                <button className="text-button" onClick={() => scrollTo('philosophy')}>
-                  Why Kaar <ArrowRight size={15} />
-                </button>
+              <div className="hero-headline-group">
+                <div className="eyebrow"><span className="eyebrow-line" /> ROOTED IN ENERGY</div>
+                <h1>Return to your <em>natural</em> rhythm.</h1>
+              </div>
+
+              {/* In Mobile view: Slider comes right after the headline */}
+              <div className="hero-visual mobile-hero-visual">
+                <HeroProductShowcase
+                  products={products}
+                  onViewProduct={(p) => setSelectedProduct(p)}
+                  onAddToCart={(p) => addToCart(p, 1)}
+                />
+              </div>
+
+              <div className="hero-details-group">
+                <p>
+                  Ayurvedic rituals for the way you want to feel — consciously sourced, beautifully made,
+                  and designed for everyday living.
+                </p>
+                <div className="hero-actions">
+                  <button className="button button-dark" onClick={() => scrollTo('shop')}>
+                    Shop rituals <ArrowRight size={16} />
+                  </button>
+                  <button className="text-button" onClick={() => scrollTo('philosophy')}>
+                    Why Kaar <ArrowRight size={15} />
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="hero-visual">
+
+            {/* In Desktop / Laptop view: Slider sits side-by-side in right column */}
+            <div className="hero-visual desktop-hero-visual">
               <HeroProductShowcase
                 products={products}
                 onViewProduct={(p) => setSelectedProduct(p)}
@@ -847,38 +879,43 @@ function App() {
           <div>
             <h4>Care</h4>
             <button onClick={() => openOrderLookup()}>Order Tracking</button>
-            <button>Shipping & delivery</button>
-            <button>Returns & exchanges</button>
-            <button>FAQs</button>
-            <button>Contact us</button>
+            <button onClick={() => setActivePolicyModal('shipping')}>Shipping Policy</button>
+            <button onClick={() => setActivePolicyModal('cancellation')}>Cancellation & Refund Policy</button>
+            <button onClick={() => scrollTo('faq')}>FAQs</button>
+            <button onClick={() => setActivePolicyModal('contact')}>Contact Us</button>
           </div>
           <div>
-            <h4>Stay connected</h4>
-            <p className="footer-muted">Instagram · Pinterest · YouTube</p>
-            <p className="footer-muted">hello@kaarayurveda.com<br />New Delhi, India</p>
+            <h4>Contact & Care</h4>
+            <div style={{ display: 'grid', gap: '8px', fontSize: '12px', color: '#74766b', marginTop: '6px' }}>
+              <a href="mailto:support@thelifeholics.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
+                <Mail size={13} color="#55694b" /> support@thelifeholics.com
+              </a>
+              <a href="mailto:info.lifeholics@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none' }}>
+                <Mail size={13} color="#55694b" /> info.lifeholics@gmail.com
+              </a>
+              <a href="tel:+918006880222" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'inherit', textDecoration: 'none', fontWeight: 500 }}>
+                <Phone size={13} color="#55694b" /> +91 8006880222
+              </a>
+            </div>
+            <p className="footer-muted" style={{ marginTop: '12px', fontSize: '11px' }}>
+              Customer Support Hours:<br />Mon – Sat: 10:00 AM – 7:00 PM IST
+            </p>
           </div>
         </div>
         <div className="footer-bottom">
           <span>© 2026 LifeHolics · Kaar Ayurveda</span>
-          <span>Privacy · Terms · Accessibility</span>
-          <span>
-            <button
-              onClick={() => {
-                setAccountInitialContact(ADMIN_EMAIL);
-                setAccountOpen(true);
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'inherit',
-                fontSize: 'inherit',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-              }}
-            >
-              Admin Access
+          <span style={{ display: 'inline-flex', gap: '14px' }}>
+            <button onClick={() => setActivePolicyModal('shipping')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>
+              Shipping Policy
+            </button>
+            <button onClick={() => setActivePolicyModal('cancellation')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>
+              Refund Policy
+            </button>
+            <button onClick={() => setActivePolicyModal('contact')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>
+              Contact
             </button>
           </span>
+
         </div>
       </footer>
 
@@ -1091,6 +1128,230 @@ function App() {
           <span>Account</span>
         </button>
       </nav>
+
+      {/* Legal & Policy Modals */}
+      {activePolicyModal && (
+        <div className="overlay checkout-overlay" onClick={() => setActivePolicyModal(null)} style={{ zIndex: 150 }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              maxWidth: '680px',
+              width: '92%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              borderRadius: '4px',
+              padding: '32px 30px',
+              position: 'relative',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+            }}
+          >
+            <button
+              onClick={() => setActivePolicyModal(null)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#555',
+              }}
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
+
+            {activePolicyModal === 'shipping' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34452b', marginBottom: '8px' }}>
+                  <Truck size={22} />
+                  <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>Legal</span>
+                </div>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '26px', color: '#2d3029', margin: '0 0 6px' }}>
+                  Shipping Policy
+                </h2>
+                <span style={{ fontSize: '12px', color: '#77786e', display: 'block', marginBottom: '22px' }}>
+                  Last updated: August 2026
+                </span>
+
+                <div style={{ display: 'grid', gap: '18px', fontSize: '13px', lineHeight: '1.7', color: '#3d4036' }}>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>1. Where We Ship</h3>
+                    <p style={{ margin: 0 }}>
+                      We offer shipping across India and to most international destinations.
+                    </p>
+                    <ul style={{ margin: '6px 0 0 20px', padding: 0 }}>
+                      <li><strong>Within India:</strong> We ship to locations across the country.</li>
+                      <li><strong>International:</strong> We ship to most international destinations.</li>
+                      <li><strong>Remote Locations:</strong> Deliveries to remote or hard-to-reach locations may require additional time depending on courier availability and local delivery conditions.</li>
+                    </ul>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#686a60' }}>
+                      Please note that delivery timelines may vary depending on the destination, courier partner, customs procedures, weather conditions, and other circumstances beyond our control.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>2. Order Processing</h3>
+                    <p style={{ margin: 0 }}>
+                      Orders for physical products generally begin processing within 2 business days of placing the order. Once your order has been processed and dispatched, you will receive the relevant shipping or tracking information.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>3. Delivery Timelines</h3>
+                    <p style={{ margin: 0 }}>Estimated delivery timelines are:</p>
+                    <ul style={{ margin: '6px 0 0 20px', padding: 0 }}>
+                      <li><strong>Within India:</strong> Approximately 7–10 days from the date of dispatch.</li>
+                      <li><strong>International Orders:</strong> Approximately 15–21 days from the date of dispatch.</li>
+                    </ul>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#686a60' }}>
+                      These are estimated timelines and are not guaranteed. Delivery may take longer in certain circumstances, including courier delays, customs clearance, public holidays, weather conditions, remote locations, or other unforeseen circumstances.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>4. Shipping Charges</h3>
+                    <p style={{ margin: 0 }}>
+                      Shipping charges are calculated based on the product(s) selected and the delivery destination. The applicable shipping charges will be displayed and added to your order total at checkout before you complete your purchase. For international orders, any customs duties, import taxes, or other charges imposed by the destination country are the responsibility of the customer.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>5. Damaged Products</h3>
+                    <p style={{ margin: 0 }}>
+                      We take care to package products securely before dispatch. However, if your order arrives damaged, please follow these steps:
+                    </p>
+                    <ul style={{ margin: '6px 0 0 20px', padding: 0 }}>
+                      <li>Please record a clear, continuous video while opening the package, showing the condition of the outer packaging and the product inside.</li>
+                      <li>If the product is damaged, contact us within 2 days of delivery.</li>
+                      <li>Send the unboxing video and relevant order details to <strong>support@thelifeholics.com</strong>.</li>
+                    </ul>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#686a60' }}>
+                      An unboxing video is required to verify damage and process a replacement request.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>6. Replacement for Damaged Products</h3>
+                    <p style={{ margin: 0 }}>
+                      Replacement will be provided only in cases where the product is confirmed to have been damaged during delivery. Once we receive and review the required video and order details, our team will assess the claim and, where applicable, arrange a replacement. Please note that replacement requests submitted after 2 days of delivery or without the required video evidence may not be accepted.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>7. Lost or Delayed Shipments</h3>
+                    <p style={{ margin: 0 }}>
+                      If your shipment is delayed or appears to be lost in transit, please contact us so that we can assist you in checking the shipment status with the courier partner. Delivery timelines are estimates, and delays caused by courier partners, customs, weather, local restrictions, or other circumstances outside our control may occur.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activePolicyModal === 'cancellation' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34452b', marginBottom: '8px' }}>
+                  <FileText size={22} />
+                  <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>Legal</span>
+                </div>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '26px', color: '#2d3029', margin: '0 0 6px' }}>
+                  Cancellation & Refund Policy
+                </h2>
+                <span style={{ fontSize: '12px', color: '#77786e', display: 'block', marginBottom: '22px' }}>
+                  Last updated: July 2026
+                </span>
+
+                <div style={{ display: 'grid', gap: '18px', fontSize: '13px', lineHeight: '1.7', color: '#3d4036' }}>
+                  <p style={{ margin: 0, fontStyle: 'italic', background: '#faf9f5', padding: '14px', borderLeft: '3px solid #34452b' }}>
+                    At LifeHolics, we value your time and ours. We encourage you to make your product purchases thoughtfully and only when you are certain about proceeding. Please read the following policy carefully before completing an order.
+                  </p>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>1. Products</h3>
+                    <p style={{ margin: 0 }}>
+                      All products purchased from LifeHolics are non-refundable and non-cancellable. We request you to carefully review the product details before placing your order and purchase only when you are completely sure about your decision. Once an order has been placed, it cannot be cancelled or refunded.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>2. Refunds</h3>
+                    <p style={{ margin: 0 }}>
+                      All payments made towards products are final. Refund requests will not be accepted or processed under any circumstances. We encourage you to carefully consider your purchase before making the payment.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#2d3029', margin: '0 0 6px' }}>3. Policy Acknowledgment</h3>
+                    <p style={{ margin: 0 }}>
+                      By proceeding with a purchase, you acknowledge and agree to the terms of this Refund & Cancellation Policy. Please choose thoughtfully, book mindfully, and purchase only when you are sure. Thank you for understanding and respecting our policy.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activePolicyModal === 'contact' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34452b', marginBottom: '8px' }}>
+                  <Phone size={22} />
+                  <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>Get In Touch</span>
+                </div>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '26px', color: '#2d3029', margin: '0 0 6px' }}>
+                  Contact Us
+                </h2>
+                <p style={{ fontSize: '13px', color: '#686a60', margin: '0 0 20px', lineHeight: 1.6 }}>
+                  Our team is here to assist you with order inquiries, product guidance, and shipping questions.
+                </p>
+
+                <div style={{ display: 'grid', gap: '14px', background: '#faf9f5', padding: '20px', borderRadius: '4px', border: '1px solid #e7e5dc' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fff', border: '1px solid #deddd4', display: 'grid', placeItems: 'center' }}>
+                      <Phone size={18} color="#34452b" />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase' }}>Phone / WhatsApp Support</span>
+                      <a href="tel:+918006880222" style={{ display: 'block', fontSize: '15px', fontWeight: 600, color: '#2d3029', textDecoration: 'none' }}>
+                        +91 8006880222
+                      </a>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '1px solid #eeebe2', paddingTop: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fff', border: '1px solid #deddd4', display: 'grid', placeItems: 'center' }}>
+                      <Mail size={18} color="#34452b" />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase' }}>Customer Support Email</span>
+                      <a href="mailto:support@thelifeholics.com" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#2d3029', textDecoration: 'none' }}>
+                        support@thelifeholics.com
+                      </a>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderTop: '1px solid #eeebe2', paddingTop: '12px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fff', border: '1px solid #deddd4', display: 'grid', placeItems: 'center' }}>
+                      <Mail size={18} color="#34452b" />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '11px', color: '#77786e', textTransform: 'uppercase' }}>General & Inquiries Email</span>
+                      <a href="mailto:info.lifeholics@gmail.com" style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#2d3029', textDecoration: 'none' }}>
+                        info.lifeholics@gmail.com
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '20px', fontSize: '12px', color: '#77786e', lineHeight: 1.6 }}>
+                  <strong>Operational Address:</strong><br />
+                  LifeHolics · Kaar Ayurveda, New Delhi, India.<br />
+                  Mon – Sat: 10:00 AM – 7:00 PM IST
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1528,10 +1789,10 @@ function FAQ() {
                 {index === 0
                   ? 'Kaar Ayurveda is rooted in the everyday wisdom of traditional Ayurvedic botanicals, formulated for contemporary daily living.'
                   : index === 1
-                  ? 'Begin with how you want to feel. Our Daily Wellness Quiz is a gentle way to discover a starting point.'
-                  : index === 2
-                  ? 'Yes, our formulations are balanced and gentle for daily rituals. Please review botanical ingredients if you have specific sensitivities.'
-                  : 'Orders are shipped across India within 2-4 business days. Track your parcel anytime with your checkout contact.'}
+                    ? 'Begin with how you want to feel. Our Daily Wellness Quiz is a gentle way to discover a starting point.'
+                    : index === 2
+                      ? 'Yes, our formulations are balanced and gentle for daily rituals. Please review botanical ingredients if you have specific sensitivities.'
+                      : 'Orders are shipped across India within 2-4 business days. Track your parcel anytime with your checkout contact.'}
               </p>
             )}
           </div>

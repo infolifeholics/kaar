@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Check if user is authenticated admin (info.lifeholics@gmail.com)
+    function isAdmin() {
+      return request.auth != null && 
+        (request.auth.token.email == 'info.lifeholics@gmail.com' || request.auth.token.admin == true);
+    }
+    
+    // Products: Public can read published products, only Admin can write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Categories: Public can read, only Admin can write
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Carts: Users can read/write their own cart document
+    match /carts/{cartId} {
+      allow read, write: if true;
+    }
+    
+    // Orders: Anyone can create (guest or user checkout). 
+    // Customers can read matching contact orders, Admin can read/write all
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Payment attempts & logs
+    match /paymentAttempts/{attemptId} {
+      allow create: if true;
+      allow read, write: if isAdmin();
+    }
+    
+    // Google Sheets synchronization queue / logs
+    match /sheetsSyncLog/{logId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

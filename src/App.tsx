@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ArrowRight,
   Check,
@@ -217,6 +217,27 @@ function App() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
+  // Dynamic Shipping Charge calculation based on product settings or subtotal threshold
+  const calculateShipping = useCallback((cartItems: CartItem[], currentSubtotal: number) => {
+    if (!cartItems.length) return 0;
+    if (currentSubtotal >= 1500) return 0;
+
+    // Check if any product has a specific shippingFee defined
+    const customFees = cartItems
+      .map((item) => item.product.shippingFee)
+      .filter((fee): fee is number => fee !== undefined && fee !== null);
+
+    if (customFees.length > 0) {
+      // Use the highest shipping fee among cart products, or sum if specified
+      return Math.max(...customFees);
+    }
+
+    // Default standard shipping if not specified
+    return 99;
+  }, []);
+
+  const shippingFee = calculateShipping(cart, subtotal);
+
   const filteredProducts = useMemo(() => {
     return products.filter((product) =>
       `${product.name} ${product.category} ${product.description}`.toLowerCase().includes(query.toLowerCase())
@@ -266,7 +287,7 @@ function App() {
   // Trigger Razorpay payment gateway
   async function handleProceedToRazorpay() {
     if (!cart.length) return;
-    const shipping = subtotal >= 1500 ? 0 : 99;
+    const shipping = calculateShipping(cart, subtotal);
     const totalAmount = subtotal + shipping;
 
     const fullAddress = [
@@ -959,6 +980,12 @@ function App() {
                     <span>Subtotal</span>
                     <strong>{money(subtotal)}</strong>
                   </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#77786e' }}>Estimated Shipping</span>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#354332' }}>
+                      {shippingFee === 0 ? 'Complimentary' : money(shippingFee)}
+                    </span>
+                  </div>
                   <p>
                     {subtotal >= 1500
                       ? 'Complimentary shipping unlocked.'
@@ -999,6 +1026,7 @@ function App() {
           error={checkoutError}
           cart={cart}
           subtotal={subtotal}
+          shipping={shippingFee}
           order={placedOrder}
           onClose={() => setCheckoutOpen(false)}
           onFieldChange={updateCheckoutField}
@@ -1345,6 +1373,7 @@ function CheckoutModal({
   error,
   cart,
   subtotal,
+  shipping = 0,
   order,
   onClose,
   onFieldChange,
@@ -1359,6 +1388,7 @@ function CheckoutModal({
   error: string;
   cart: CartItem[];
   subtotal: number;
+  shipping?: number;
   order: Order | null;
   onClose: () => void;
   onFieldChange: (field: keyof CheckoutDetails, value: string) => void;
@@ -1368,7 +1398,6 @@ function CheckoutModal({
   onTrackOrder: () => void;
   onSignIn: () => void;
 }) {
-  const shipping = subtotal >= 1500 ? 0 : 99;
   const total = subtotal + shipping;
   const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
   const fullName = `${details.firstName} ${details.lastName}`.trim();
@@ -1392,7 +1421,7 @@ function CheckoutModal({
             <span className="eyebrow">ORDER RECEIVED · PAYMENT VERIFIED</span>
             <h1>Your order is confirmed.</h1>
             <p className="confirmation-copy">
-              Your order has been logged to Firebase and synchronized to Google Sheets. A confirmation email has been dispatched.
+              You will receive a confirmation message shortly. Your tracking details will be shared once your order is shipped.
             </p>
             <div className="confirmation-order">
               <span>Order reference</span>
@@ -1621,7 +1650,7 @@ function CheckoutModal({
                     <span className="prepaid-label">RAZORPAY LIVE</span>
                   </div>
                   <p className="checkout-disclaimer">
-                    Clicking "Pay Now" opens Razorpay Checkout. Upon verified payment, your order will be confirmed and logged to Google Sheets and Firebase.
+                    Clicking "Pay Now" opens Razorpay Checkout. Upon verified payment, your order will be confirmed .
                   </p>
                   {error && <p className="checkout-error" role="alert">{error}</p>}
                   <div className="checkout-form-actions">

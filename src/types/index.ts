@@ -6,6 +6,7 @@ export interface Product {
   subcategory?: string;
   price: number;
   compareAt?: number;
+  shippingFee?: number;
   shortDescription?: string;
   description: string;
   note: string;

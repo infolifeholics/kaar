@@ -513,7 +513,7 @@ export const TestimonialTicker: React.FC<TestimonialTickerProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Meera Nambiar"
+                    placeholder="e.g. Megha ..."
                     value={feedbackName}
                     onChange={(e) => setFeedbackName(e.target.value)}
                     style={{
@@ -527,34 +527,6 @@ export const TestimonialTicker: React.FC<TestimonialTickerProps> = ({
                     }}
                   />
                 </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#686b60', marginBottom: '6px', fontWeight: 600 }}>
-                    Product / Experience *
-                  </label>
-                  <select
-                    value={feedbackProduct}
-                    onChange={(e) => setFeedbackProduct(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #dedbd0',
-                      background: '#faf9f5',
-                      fontSize: '13px',
-                      borderRadius: '3px',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="General Experience">General Wellness & Experience</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.name}>
-                        {p.name} ({p.category})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#686b60', marginBottom: '6px', fontWeight: 600 }}>
                     Rating

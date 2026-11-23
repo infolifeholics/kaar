@@ -406,7 +406,7 @@ export const SmartOrderTrackingModal: React.FC<SmartOrderTrackingModalProps> = (
         )}
 
         <p className="account-demo-note" style={{ marginTop: '20px' }}>
-          Connected securely to Kaar Ayurveda database and Firebase Authentication.
+          Connected securely to Kaar Ayurveda.
         </p>
       </section>
     </div>

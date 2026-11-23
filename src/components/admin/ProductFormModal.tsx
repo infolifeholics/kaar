@@ -31,6 +31,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [subcategory, setSubcategory] = useState(initialProduct?.subcategory || '');
   const [price, setPrice] = useState(initialProduct?.price ? String(initialProduct.price) : '');
   const [compareAt, setCompareAt] = useState(initialProduct?.compareAt ? String(initialProduct.compareAt) : '');
+  const [shippingFee, setShippingFee] = useState(
+    initialProduct?.shippingFee !== undefined ? String(initialProduct.shippingFee) : ''
+  );
   const [shortDescription, setShortDescription] = useState(initialProduct?.shortDescription || '');
   const [description, setDescription] = useState(initialProduct?.description || '');
   const [note, setNote] = useState(initialProduct?.note || 'Mindful · Natural · Balanced');
@@ -170,6 +173,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         subcategory: subcategory.trim(),
         price: Number(price),
         compareAt: compareAt ? Number(compareAt) : undefined,
+        shippingFee: shippingFee !== '' && !isNaN(Number(shippingFee)) ? Number(shippingFee) : undefined,
         shortDescription: shortDescription.trim(),
         description: description.trim(),
         note: note.trim(),
@@ -314,7 +318,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </label>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
               <label style={{ display: 'grid', gap: '6px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 500 }}>Selling Price (₹) *</span>
                 <input
@@ -338,6 +342,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   placeholder="1490"
                   style={{ border: '1px solid #deddd4', padding: '10px 12px', height: '42px', fontSize: '13px' }}
                 />
+              </label>
+
+              <label style={{ display: 'grid', gap: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 500, color: '#354332' }}>
+                  Shipping Charge (₹)
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={shippingFee}
+                  onChange={(e) => setShippingFee(e.target.value)}
+                  placeholder="e.g. 0 for Free, 49, 99"
+                  style={{ border: '1px solid #b8c4b2', background: '#fafbf8', padding: '10px 12px', height: '42px', fontSize: '13px' }}
+                />
+                <span style={{ fontSize: '10px', color: '#77786e' }}>Leave blank or 0 for complimentary / standard</span>
               </label>
 
               <label style={{ display: 'grid', gap: '6px' }}>

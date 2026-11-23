@@ -159,17 +159,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="admin-dashboard-container">
       <style>{`
-        .admin-dashboard-container {
+                .admin-dashboard-container {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
+          width: 100vw;
+          max-width: 100vw;
+          height: 100vh;
+          max-height: 100vh;
           background: #f8f7f2;
           z-index: 2100;
           overflow-y: auto;
+          overflow-x: hidden;
           color: #2d3029;
           font-family: inherit;
+          box-sizing: border-box;
         }
 
         .admin-header {
@@ -177,15 +183,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           color: #fff;
           padding: 12px 24px;
           display: flex;
-          justifyContent: space-between;
+          justify-content: space-between;
           align-items: center;
           gap: 12px;
+          position: sticky;
+          top: 0;
+          z-index: 30;
         }
 
         .admin-title-area {
           display: flex;
           align-items: center;
           gap: 10px;
+          min-width: 0;
         }
 
         .admin-title-text {
@@ -201,34 +211,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           align-items: center;
           gap: 12px;
           margin-left: auto;
+          flex-shrink: 0;
         }
 
         .admin-nav-bar {
           background: #fff;
           border-bottom: 1px solid #e7e5dc;
-          padding: 0 24px;
+          padding: 0 20px;
           display: flex;
-          justifyContent: space-between;
           align-items: center;
-          gap: 16px;
+          gap: 14px;
+          position: sticky;
+          top: 56px;
+          z-index: 25;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          white-space: nowrap;
+          scrollbar-width: none;
+          max-width: 100vw;
+          box-sizing: border-box;
+        }
+
+        .admin-nav-bar::-webkit-scrollbar {
+          display: none;
         }
 
         .admin-nav-tabs {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 18px;
+          flex-shrink: 0;
         }
 
         .admin-nav-tab {
-          padding: 14px 0;
+          padding: 14px 2px;
           border: none;
           background: transparent;
           font-size: 13px;
           cursor: pointer;
-          display: flex;
+          display: inline-flex;
           align-items: center;
           gap: 6px;
           white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .admin-add-product-btn {
@@ -240,30 +265,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           display: inline-flex;
           align-items: center;
           gap: 5px;
+          flex-shrink: 0;
         }
 
         @media (max-width: 640px) {
           .admin-header {
-            padding: 10px 16px;
+            padding: 10px 14px;
+          }
+
+          .admin-title-text {
+            font-size: 13px;
           }
 
           .admin-nav-bar {
-            padding: 0 14px;
-            gap: 10px;
+            padding: 0 12px;
+            gap: 12px;
+            top: 52px;
           }
 
           .admin-nav-tabs {
-            gap: 12px;
+            gap: 14px;
           }
 
           .admin-nav-tab {
-            padding: 12px 0;
+            padding: 12px 2px;
             font-size: 12px;
           }
 
           .admin-add-product-btn {
             height: 30px;
-            padding: 0 10px;
+            padding: 0 12px;
             font-size: 11px;
             margin-left: auto;
           }

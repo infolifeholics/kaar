@@ -42,6 +42,8 @@ import { Review } from './types';
 import { subscribeToApprovedReviews, getLocalReviews } from './services/reviewService';
 
 const emptyCheckoutDetails: CheckoutDetails = {
+  email: '',
+  phone: '',
   contact: '',
   firstName: '',
   lastName: '',
@@ -217,24 +219,47 @@ function App() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
+  // Synchronize cart items with latest product data (price, shippingFee, name, images)
+  useEffect(() => {
+    if (!products.length) return;
+    setCart((currentCart) => {
+      let changed = false;
+      const updated = currentCart.map((item) => {
+        const latestProduct = products.find((p) => String(p.id) === String(item.product.id));
+        if (latestProduct && JSON.stringify(latestProduct) !== JSON.stringify(item.product)) {
+          changed = true;
+          return { ...item, product: latestProduct };
+        }
+        return item;
+      });
+      return changed ? updated : currentCart;
+    });
+  }, [products]);
+
   // Dynamic Shipping Charge calculation based on product settings or subtotal threshold
   const calculateShipping = useCallback((cartItems: CartItem[], currentSubtotal: number) => {
     if (!cartItems.length) return 0;
     if (currentSubtotal >= 1500) return 0;
 
-    // Check if any product has a specific shippingFee defined
+    // Check if products have a specific shippingFee defined
     const customFees = cartItems
-      .map((item) => item.product.shippingFee)
+      .map((item) => {
+        const productFromCatalog = products.find((p) => String(p.id) === String(item.product.id));
+        const fee = productFromCatalog?.shippingFee !== undefined 
+          ? productFromCatalog.shippingFee 
+          : item.product.shippingFee;
+        return fee;
+      })
       .filter((fee): fee is number => fee !== undefined && fee !== null);
 
     if (customFees.length > 0) {
-      // Use the highest shipping fee among cart products, or sum if specified
+      // Use the highest shipping fee configured in the cart items (e.g. 0 if set to 0)
       return Math.max(...customFees);
     }
 
-    // Default standard shipping if not specified
+    // Default standard shipping if none of the products in cart have custom shipping set
     return 99;
-  }, []);
+  }, [products]);
 
   const shippingFee = calculateShipping(cart, subtotal);
 
@@ -303,19 +328,23 @@ function App() {
 
     const orderRef = `KAAR-${Date.now().toString().slice(-8)}`;
 
+    const customerEmail = checkoutDetails.email.trim();
+    const customerPhone = checkoutDetails.phone.trim();
+    const customerContact = customerEmail || customerPhone;
+
     await openRazorpayCheckout({
       amount: totalAmount,
       customerName: `${checkoutDetails.firstName} ${checkoutDetails.lastName}`.trim(),
-      email: checkoutDetails.contact.includes('@') ? checkoutDetails.contact.trim() : 'info.lifeholics@gmail.com',
-      contact: !checkoutDetails.contact.includes('@') ? checkoutDetails.contact.trim() : '9876543210',
+      email: customerEmail,
+      contact: customerPhone || '9876543210',
       orderRef,
       onSuccess: async (paymentResult) => {
         // Create verified paid order
         const paidOrder = await createOrder({
-          contact: checkoutDetails.contact.trim(),
+          contact: customerContact,
           customerName: `${checkoutDetails.firstName} ${checkoutDetails.lastName}`.trim(),
-          email: checkoutDetails.contact.includes('@') ? checkoutDetails.contact.trim() : undefined,
-          phone: !checkoutDetails.contact.includes('@') ? checkoutDetails.contact.trim() : undefined,
+          email: customerEmail,
+          phone: customerPhone,
           address: fullAddress,
           items: cart,
           subtotal,
@@ -1032,11 +1061,18 @@ function App() {
           onFieldChange={updateCheckoutField}
           onContinue={() => {
             if (checkoutStep === 1) {
-              const contact = checkoutDetails.contact.trim();
-              const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
-              const isPhone = /^\+?[\d\s()-]+$/.test(contact) && contact.replace(/\D/g, '').length >= 10;
-              if (!isEmail && !isPhone) {
-                setCheckoutError('Enter a valid email address or phone number to continue.');
+              const email = checkoutDetails.email.trim();
+              const phone = checkoutDetails.phone.trim();
+              const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+              const cleanDigits = phone.replace(/\D/g, '');
+
+              if (!email || !isEmail) {
+                setCheckoutError('A valid email address is required so you receive order confirmation & dispatch updates.');
+                return;
+              }
+
+              if (!phone || cleanDigits.length < 10) {
+                setCheckoutError('Please enter a valid 10-digit mobile number for delivery communication.');
                 return;
               }
             }
@@ -1439,7 +1475,7 @@ function CheckoutModal({
             </div>
             <div className="confirmation-order">
               <span>Confirmation sent to</span>
-              <strong>{order.contact}</strong>
+              <strong>{order.email || order.contact} {order.phone ? `(${order.phone})` : ''}</strong>
             </div>
             <div className="confirmation-actions">
               <button className="button button-dark" onClick={onTrackOrder}>
@@ -1487,17 +1523,33 @@ function CheckoutModal({
                       <p>We’ll use this for your order confirmation and dispatch updates.</p>
                     </div>
                   </div>
-                  <label>
-                    Email or mobile number
-                    <input
-                      autoComplete="email"
-                      type="text"
-                      required
-                      value={details.contact}
-                      onChange={(event) => onFieldChange('contact', event.target.value)}
-                      placeholder="you@example.com or 98765 43210"
-                    />
-                  </label>
+                  <div className="form-two-col">
+                    <label>
+                      Email address <span style={{ color: '#b91c1c' }}>* (Mandatory for order confirmation)</span>
+                      <input
+                        autoComplete="email"
+                        type="email"
+                        required
+                        value={details.email}
+                        onChange={(event) => {
+                          onFieldChange('email', event.target.value);
+                          onFieldChange('contact', event.target.value);
+                        }}
+                        placeholder="you@example.com"
+                      />
+                    </label>
+                    <label>
+                      Mobile number <span style={{ color: '#b91c1c' }}>*</span>
+                      <input
+                        autoComplete="tel"
+                        type="tel"
+                        required
+                        value={details.phone}
+                        onChange={(event) => onFieldChange('phone', event.target.value)}
+                        placeholder="10-digit mobile number"
+                      />
+                    </label>
+                  </div>
                   <div className="form-two-col">
                     <label>
                       First name
@@ -1630,7 +1682,10 @@ function CheckoutModal({
                   <div className="review-block">
                     <div>
                       <span className="review-label">CONTACT</span>
-                      <strong>{details.contact}</strong>
+                      <strong>
+                        {details.email}
+                        {details.phone && <div>Phone: {details.phone}</div>}
+                      </strong>
                     </div>
                     <button onClick={() => { onBack(); onBack(); }}>Edit</button>
                   </div>

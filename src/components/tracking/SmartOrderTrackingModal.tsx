@@ -253,7 +253,7 @@ export const SmartOrderTrackingModal: React.FC<SmartOrderTrackingModalProps> = (
           /* NORMAL SEARCH FORM */
           <form className="account-lookup" onSubmit={handleSearchSubmit}>
             <label>
-              Email or mobile number
+              Email or 10-digit mobile number
               <input
                 type="text"
                 required
@@ -263,13 +263,17 @@ export const SmartOrderTrackingModal: React.FC<SmartOrderTrackingModalProps> = (
                   setSearched(false);
                   setErrorMessage('');
                 }}
-                placeholder="Enter your checkout contact (e.g. hello@example.com)"
+                placeholder="Enter email or phone number used at checkout"
               />
             </label>
 
+            <span style={{ display: 'block', fontSize: '11px', color: '#77786e', marginTop: '4px', textAlign: 'left' }}>
+              You can track your order using either your Email address or your Mobile number.
+            </span>
+
             {errorMessage && <p className="checkout-error" role="alert">{errorMessage}</p>}
 
-            <button className="button button-dark full" type="submit" disabled={loading}>
+            <button className="button button-dark full" type="submit" disabled={loading} style={{ marginTop: '10px' }}>
               {loading ? 'Searching...' : 'Find my orders'} <ArrowRight size={15} />
             </button>
           </form>

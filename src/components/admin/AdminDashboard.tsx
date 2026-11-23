@@ -762,8 +762,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           )}
                         </div>
 
-                        <div style={{ fontSize: '10px', color: '#77786e', marginBottom: '8px' }}>
-                          Stock: <strong>{p.stockQuantity ?? 50}</strong>
+                        <div style={{ fontSize: '10px', color: '#77786e', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Stock: <strong>{p.stockQuantity ?? 50}</strong></span>
+                          <span>Shipping: <strong style={{ color: p.shippingFee === 0 ? '#166534' : '#354332' }}>{p.shippingFee === 0 ? 'Free' : p.shippingFee !== undefined ? `₹${p.shippingFee}` : 'Std ₹99'}</strong></span>
                         </div>
 
                         {/* Action buttons right inside the card */}
@@ -875,6 +876,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {p.compareAt && (
                               <del style={{ fontSize: '11px', color: '#99998f' }}>{money(p.compareAt)}</del>
                             )}
+                            <div style={{ fontSize: '11px', color: p.shippingFee === 0 ? '#166534' : '#77786e', marginTop: '2px' }}>
+                              Ship: {p.shippingFee === 0 ? 'Free' : p.shippingFee !== undefined ? `₹${p.shippingFee}` : '₹99'}
+                            </div>
                           </td>
 
                           <td style={{ padding: '14px 16px' }}>
@@ -1091,7 +1095,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {/* Customer info */}
                       <div style={{ fontSize: '11px', lineHeight: '1.6', color: '#44463e', background: '#faf9f5', padding: '12px', borderRadius: '3px' }}>
                         <div><strong>Customer:</strong> {ord.customerName}</div>
-                        <div><strong>Contact:</strong> {ord.contact}</div>
+                        <div><strong>Email:</strong> {ord.email || ord.contact}</div>
+                        <div><strong>Phone:</strong> {ord.phone || 'N/A'}</div>
                         <div><strong>Address:</strong> {ord.address}</div>
                         <div><strong>Payment:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 600, color: ord.paymentStatus === 'paid' ? '#166534' : '#991b1b' }}>{ord.paymentStatus}</span></div>
                       </div>

@@ -9,7 +9,7 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
-    // Orders: allow customer to create and read by contact, admin can read/write all
+    // Orders: allow customer to create and read by contact/email/phone, admin can read/write all
     match /orders/{orderId} {
       allow read: if true;
       allow create: if true;
@@ -21,6 +21,14 @@ service cloud.firestore {
       allow read: if resource.data.status == 'approved' || request.auth != null;
       allow create: if true;
       allow update, delete: if request.auth != null;
+    }
+
+    // Email notifications and Trigger Email extension
+    match /emailLogs/{logId} {
+      allow read, write: if true;
+    }
+    match /mail/{mailId} {
+      allow read, write: if true;
     }
 
     // Google Sheets sync logs and audit logs

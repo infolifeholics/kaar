@@ -138,6 +138,7 @@ export async function saveProduct(product: Partial<Product> & { name: string }):
     subcategory: product.subcategory || '',
     price: Number(product.price) || 0,
     compareAt: product.compareAt ? Number(product.compareAt) : undefined,
+    shippingFee: product.shippingFee !== undefined && product.shippingFee !== null ? Number(product.shippingFee) : undefined,
     shortDescription: product.shortDescription || '',
     description: product.description || '',
     note: product.note || 'Mindful · Natural · Balanced',

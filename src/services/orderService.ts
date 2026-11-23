@@ -70,16 +70,51 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'createdAt'>): P
 export async function findOrdersByContact(contact: string): Promise<Order[]> {
   const cleanContact = contact.trim().toLowerCase();
   if (!cleanContact) return [];
+  const cleanDigits = cleanContact.replace(/\D/g, '');
+
+  const collected: Order[] = [];
+  const seenIds = new Set<string>();
 
   // Try Firestore query first
   try {
     const ordersRef = collection(db, ORDERS_COLLECTION);
-    const q = query(ordersRef, where('contact', '==', cleanContact));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      const list: Order[] = [];
-      snapshot.forEach((d) => list.push({ id: d.id, ...(d.data() as Omit<Order, 'id'>) }));
-      return list;
+    
+    // Check contact field
+    const q1 = query(ordersRef, where('contact', '==', cleanContact));
+    const snap1 = await getDocs(q1);
+    snap1.forEach((d) => {
+      if (!seenIds.has(d.id)) {
+        seenIds.add(d.id);
+        collected.push({ id: d.id, ...(d.data() as Omit<Order, 'id'>) });
+      }
+    });
+
+    // If cleanContact looks like an email, also check email field
+    if (cleanContact.includes('@')) {
+      const qEmail = query(ordersRef, where('email', '==', cleanContact));
+      const snapEmail = await getDocs(qEmail);
+      snapEmail.forEach((d) => {
+        if (!seenIds.has(d.id)) {
+          seenIds.add(d.id);
+          collected.push({ id: d.id, ...(d.data() as Omit<Order, 'id'>) });
+        }
+      });
+    }
+
+    // If cleanContact has digits, also check phone field
+    if (cleanDigits.length >= 10) {
+      const qPhone = query(ordersRef, where('phone', '==', cleanContact));
+      const snapPhone = await getDocs(qPhone);
+      snapPhone.forEach((d) => {
+        if (!seenIds.has(d.id)) {
+          seenIds.add(d.id);
+          collected.push({ id: d.id, ...(d.data() as Omit<Order, 'id'>) });
+        }
+      });
+    }
+
+    if (collected.length > 0) {
+      return collected;
     }
   } catch (err) {
     console.warn('Firestore order lookup fallback to local:', err);
@@ -87,12 +122,15 @@ export async function findOrdersByContact(contact: string): Promise<Order[]> {
 
   // Fallback to local storage
   const localOrders = getLocalOrders();
-  return localOrders.filter(
-    (o) =>
-      o.contact.trim().toLowerCase() === cleanContact ||
-      (o.email && o.email.trim().toLowerCase() === cleanContact) ||
-      (o.phone && o.phone.replace(/\D/g, '') === cleanContact.replace(/\D/g, ''))
-  );
+  return localOrders.filter((o) => {
+    const matchContact = o.contact && o.contact.trim().toLowerCase() === cleanContact;
+    const matchEmail = o.email && o.email.trim().toLowerCase() === cleanContact;
+    const matchPhone =
+      cleanDigits.length >= 10 &&
+      o.phone &&
+      o.phone.replace(/\D/g, '').endsWith(cleanDigits.slice(-10));
+    return matchContact || matchEmail || matchPhone;
+  });
 }
 
 // Admin function: Get all orders across the system

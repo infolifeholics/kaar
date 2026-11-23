@@ -37,7 +37,9 @@ export interface CartItem {
 }
 
 export interface CheckoutDetails {
-  contact: string;
+  email: string;
+  phone: string;
+  contact?: string; // backward compatibility
   firstName: string;
   lastName: string;
   address: string;

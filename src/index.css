@@ -411,3 +411,120 @@ html, body {
   color: #c49a45 !important;
   filter: drop-shadow(0 0 7px rgba(196, 154, 69, 0.5));
 }
+
+/* ========================================================
+   LEGAL & POLICY MODAL OVERLAY (Shipping, Cancellation, Contact)
+   Must be above header (z-index: 2500) and centered with proper spacing
+   ======================================================== */
+.policy-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(28, 36, 25, 0.62) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  z-index: 2500 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 80px 20px 30px !important;
+  overflow-y: auto !important;
+  animation: modalIn 0.25s ease !important;
+}
+
+.policy-modal-content {
+  background: #ffffff !important;
+  max-width: 680px !important;
+  width: 100% !important;
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  border-radius: 6px !important;
+  padding: 34px 32px !important;
+  position: relative !important;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3) !important;
+  margin: auto !important;
+}
+
+.policy-modal-close {
+  position: absolute !important;
+  top: 18px !important;
+  right: 18px !important;
+  background: #f4f2ea !important;
+  border: none !important;
+  cursor: pointer !important;
+  color: #34452b !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.2s, transform 0.2s !important;
+}
+
+.policy-modal-close:hover {
+  background: #e5dfd2 !important;
+  transform: rotate(90deg) !important;
+}
+
+@media (max-width: 600px) {
+  .policy-modal-overlay {
+    padding: 70px 14px 70px !important;
+  }
+  .policy-modal-content {
+    padding: 24px 20px !important;
+    max-height: calc(100vh - 100px) !important;
+  }
+}
+
+/* ========================================================
+   CART DRAWER & GLOBAL MODAL OVERLAYS (Above sticky header)
+   ======================================================== */
+.overlay {
+  z-index: 2000 !important;
+}
+
+.cart-overlay {
+  z-index: 2100 !important;
+}
+
+.checkout-overlay {
+  z-index: 2200 !important;
+  align-items: center !important;
+  padding: 80px 20px 30px !important;
+}
+
+.account-overlay {
+  z-index: 2200 !important;
+}
+
+.quiz-overlay {
+  z-index: 2200 !important;
+}
+
+/* Ensure the cart drawer slides in cleanly on the right and has comfortable padding */
+.cart-drawer {
+  width: min(470px, 100%) !important;
+  height: 100% !important;
+  background: var(--ivory) !important;
+  padding: 37px 35px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  animation: slideIn .3s ease !important;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Drawer header adjustment so title and close button are spaced well away from screen edge */
+.drawer-head {
+  padding-top: 10px !important;
+}
+
+@media (max-width: 760px) {
+  .checkout-overlay {
+    padding: 70px 12px 70px !important;
+  }
+  .cart-drawer {
+    padding: 28px 20px 75px !important;
+  }
+}
+
+

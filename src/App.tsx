@@ -903,7 +903,7 @@ function App() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 LifeHolics · Kaar Ayurveda</span>
+          <span>© {new Date().getFullYear()} LifeHolics · Kaar Ayurveda</span>
           <span style={{ display: 'inline-flex', gap: '14px' }}>
             <button onClick={() => setActivePolicyModal('shipping')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 'inherit', padding: 0 }}>
               Shipping Policy
@@ -921,7 +921,7 @@ function App() {
 
       {/* Cart Drawer */}
       {cartOpen && (
-        <div className="overlay" onClick={() => setCartOpen(false)}>
+        <div className="overlay cart-overlay" onClick={() => setCartOpen(false)}>
           <aside className="cart-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="drawer-head">
               <div>
@@ -1131,32 +1131,14 @@ function App() {
 
       {/* Legal & Policy Modals */}
       {activePolicyModal && (
-        <div className="overlay checkout-overlay" onClick={() => setActivePolicyModal(null)} style={{ zIndex: 150 }}>
+        <div className="policy-modal-overlay" onClick={() => setActivePolicyModal(null)}>
           <div
+            className="policy-modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#fff',
-              maxWidth: '680px',
-              width: '92%',
-              maxHeight: '85vh',
-              overflowY: 'auto',
-              borderRadius: '4px',
-              padding: '32px 30px',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-            }}
           >
             <button
               onClick={() => setActivePolicyModal(null)}
-              style={{
-                position: 'absolute',
-                top: '18px',
-                right: '18px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#555',
-              }}
+              className="policy-modal-close"
               aria-label="Close modal"
             >
               <X size={20} />

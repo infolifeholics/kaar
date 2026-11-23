@@ -78,7 +78,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   return (
-    <div className="overlay checkout-overlay" onClick={onClose} style={{ zIndex: 130 }}>
+    <div className="overlay checkout-overlay" onClick={onClose}>
       <div
         className="product-modal"
         onClick={(e) => e.stopPropagation()}

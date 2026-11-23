@@ -173,7 +173,7 @@ firebase deploy --only hosting
 
 ```bash
 git add .
-git commit -m "Fix: footer fix and add pages Shipping Policy,Refund Policy,Contact"
+git commit -m "Fix: footer ui fixed"
 git push
 ```
 

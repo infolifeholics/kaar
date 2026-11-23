@@ -166,7 +166,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           right: 0;
           bottom: 0;
           background: #f8f7f2;
-          z-index: 140;
+          z-index: 2100;
           overflow-y: auto;
           color: #2d3029;
           font-family: inherit;

@@ -360,31 +360,6 @@ export const TestimonialTicker: React.FC<TestimonialTickerProps> = ({
           >
             <PlusCircle size={15} /> Add Review / Feedback
           </button>
-
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button
-              className="testimonial-nav-btn"
-              onClick={() => setIsPaused(!isPaused)}
-              title={isPaused ? 'Resume auto scroll' : 'Pause auto scroll'}
-              aria-label="Pause or play carousel"
-            >
-              {isPaused ? <Play size={13} /> : <Pause size={13} />}
-            </button>
-            <button
-              className="testimonial-nav-btn"
-              onClick={() => handleManualScroll('left')}
-              aria-label="Previous testimonials"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <button
-              className="testimonial-nav-btn"
-              onClick={() => handleManualScroll('right')}
-              aria-label="Next testimonials"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -400,11 +375,11 @@ export const TestimonialTicker: React.FC<TestimonialTickerProps> = ({
         {marqueeItems.map((item, index) => {
           const initials = item.userName
             ? item.userName
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase()
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase()
             : 'KR';
 
           return (
